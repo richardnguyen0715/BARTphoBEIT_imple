@@ -1,11 +1,18 @@
 from BARTphoBEIT import *
 
-def evaluate_model(model_path, test_questions, config):
+def evaluate_model(model_path, test_questions, config, load_pretrained=True):
     """Evaluate trained model"""
     
     # Load model
     model = VietnameseVQAModel(config)
-    model.load_state_dict(torch.load(model_path))
+    
+    # Only load pretrained weights if specified
+    if load_pretrained and model_path and os.path.exists(model_path):
+        print(f"Loading finetuned model from {model_path}")
+        model.load_state_dict(torch.load(model_path))
+    else:
+        print("Using base model (no finetuned weights loaded)")
+    
     model = model.to(config['device'])
     model.eval()
     
@@ -49,6 +56,7 @@ def evaluate_model(model_path, test_questions, config):
     metrics = evaluator.calculate_metrics(predictions, ground_truths)
     
     print("=== EVALUATION RESULTS ===")
+    print(f"Model type: {'Finetuned' if load_pretrained and model_path and os.path.exists(model_path) else 'Base (no finetuning)'}")
     print(f"Accuracy: {metrics['accuracy']:.4f}")
     print(f"Precision: {metrics['precision']:.4f}")
     print(f"Recall: {metrics['recall']:.4f}")

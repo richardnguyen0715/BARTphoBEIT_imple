@@ -27,7 +27,10 @@ print(f"Total test samples: {len(test_questions)}")
 
 print("\nEvaluating model...")
 metrics, predictions, ground_truths = evaluate_model(
-    'best_vqa_model.pth', test_questions, config
+    model_path=None,  # No model path
+    test_questions=test_questions, 
+    config=config,
+    load_pretrained=False  # Don't load any pretrained weights
 )
 
 print("\nAnalyzing results...")
