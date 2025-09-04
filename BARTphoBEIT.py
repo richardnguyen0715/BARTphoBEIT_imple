@@ -6,8 +6,8 @@ import torchvision.transforms as transforms
 from transformers import (
     AutoTokenizer, AutoModel, 
     ViTFeatureExtractor, ViTModel,
-    AutoTokenizer as BartphoTokenizer,  # Sử dụng AutoTokenizer cho BARTPho
-    BartForConditionalGeneration
+    # Sử dụng MBartForConditionalGeneration thay vì BartForConditionalGeneration
+    MBartForConditionalGeneration
 )
 from transformers.modeling_outputs import BaseModelOutput
 from PIL import Image
@@ -138,15 +138,15 @@ class VietnameseVQAModel(nn.Module):
         self.text_model = AutoModel.from_pretrained(model_config['text_model'])
         text_dim = self.text_model.config.hidden_size
         
-        # Text decoder (Vietnamese BART/BARTPho) - sử dụng AutoTokenizer
+        # Text decoder (Vietnamese BART/BARTPho) - sử dụng MBart cho BARTPho
         self.decoder_tokenizer = AutoTokenizer.from_pretrained(model_config['decoder_model'])
-        self.text_decoder = BartForConditionalGeneration.from_pretrained(model_config['decoder_model'])
+        self.text_decoder = MBartForConditionalGeneration.from_pretrained(model_config['decoder_model'])
         
         # Fusion layer
         hidden_dim = model_config.get('hidden_dim', 768)
         self.fusion_layer = MultimodalFusionLayer(vision_dim, text_dim, hidden_dim)
         
-        # Output projection - cập nhật cho phù hợp với BARTPho
+        # Output projection - cập nhật cho phù hợp với MBart
         decoder_dim = self.text_decoder.config.d_model
         self.output_proj = nn.Linear(hidden_dim, decoder_dim)
         
@@ -196,15 +196,11 @@ class VietnameseVQAModel(nn.Module):
         # Project to decoder dimension
         decoder_inputs = self.output_proj(fused_features)
         
-        # Use mean pooling to get a single representation for decoder initialization
-        decoder_init = decoder_inputs.mean(dim=1)  # [batch, hidden_dim]
-        
         # Generate answer using decoder
         if answer_input_ids is not None:  # Training mode
             # Teacher forcing training
-            # Pool to [batch_size, 1, d_model]
+            # Pool to [batch_size, seq_len, d_model]
             pooled = decoder_inputs.mean(dim=1, keepdim=True)
-            # Repeat to match question length (or decoder input length)
             pooled = pooled.repeat(1, answer_input_ids.size(1), 1)
             
             # Clamp token IDs to valid range to prevent CUDA index errors
@@ -220,10 +216,10 @@ class VietnameseVQAModel(nn.Module):
             return decoder_outputs
         else:  # Inference mode
             # Generate answer
-            # Pool for consistent encoder output format
             pooled = decoder_inputs.mean(dim=1, keepdim=True)
-            # Expand to minimum required length for generation
-            pooled = pooled.repeat(1, 1, 1)  # Keep as [batch, 1, d_model]
+            
+            # Đối với MBart, cần chỉ định forced_bos_token_id
+            forced_bos_token_id = self.decoder_tokenizer.lang_code_to_id.get('vi_VN', self.decoder_tokenizer.eos_token_id)
             
             generated_ids = self.text_decoder.generate(
                 encoder_outputs=BaseModelOutput(last_hidden_state=pooled),
@@ -231,7 +227,8 @@ class VietnameseVQAModel(nn.Module):
                 num_beams=4,
                 early_stopping=True,
                 pad_token_id=self.decoder_tokenizer.pad_token_id,
-                eos_token_id=self.decoder_tokenizer.eos_token_id
+                eos_token_id=self.decoder_tokenizer.eos_token_id,
+                forced_bos_token_id=forced_bos_token_id  # Quan trọng cho MBart
             )
             return generated_ids
 
