@@ -1,4 +1,5 @@
 from BARTphoBEIT import *
+from transformers import BartTokenizer
 
 def main():
     """Main training and evaluation function"""
@@ -44,15 +45,16 @@ def main():
     print(f"Validation questions: {len(val_questions)}")
     
     # Initialize tokenizers and feature extractors
-    tokenizer = AutoTokenizer.from_pretrained(config['text_model'])
+    question_tokenizer = AutoTokenizer.from_pretrained(config['text_model'])
+    answer_tokenizer = BartTokenizer.from_pretrained(config['decoder_model'])
     feature_extractor = ViTFeatureExtractor.from_pretrained(config['vision_model'])
     
     # Create datasets
     train_dataset = VietnameseVQADataset(
-        train_questions, config['image_dir'], tokenizer, feature_extractor, config['max_length']
+        train_questions, config['image_dir'], question_tokenizer, answer_tokenizer, feature_extractor, config['max_length']
     )
     val_dataset = VietnameseVQADataset(
-        val_questions, config['image_dir'], tokenizer, feature_extractor, config['max_length']
+        val_questions, config['image_dir'], question_tokenizer, answer_tokenizer, feature_extractor, config['max_length']
     )
     
     # Create data loaders

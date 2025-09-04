@@ -2,7 +2,7 @@ import pandas as pd
 import ast
 
 # Load dataframe
-df = pd.read_csv('your_vqa_dataset.csv')
+df = pd.read_csv('/home/tgng/coding/BARTphoBEIT_imple/text/evaluate_60k_data_balanced.csv')
 
 # Sử dụng hàm prepare_data
 def prepare_data(df):

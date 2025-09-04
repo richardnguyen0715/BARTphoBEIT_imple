@@ -10,11 +10,12 @@ def evaluate_model(model_path, test_questions, config):
     model.eval()
     
     # Prepare test dataset
-    tokenizer = AutoTokenizer.from_pretrained(config['text_model'])
+    question_tokenizer = AutoTokenizer.from_pretrained(config['text_model'])
+    answer_tokenizer = BartTokenizer.from_pretrained(config['decoder_model'])
     feature_extractor = ViTFeatureExtractor.from_pretrained(config['vision_model'])
     
     test_dataset = VietnameseVQADataset(
-        test_questions, config['image_dir'], tokenizer, feature_extractor
+        test_questions, config['image_dir'], question_tokenizer, answer_tokenizer, feature_extractor
     )
     test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
     
@@ -22,6 +23,7 @@ def evaluate_model(model_path, test_questions, config):
     evaluator = VQAEvaluator(model.decoder_tokenizer)
     predictions = []
     ground_truths = []
+    sample_questions = []  # Store questions for sample display
     
     with torch.no_grad():
         for batch in tqdm(test_loader, desc="Testing"):
@@ -41,6 +43,7 @@ def evaluate_model(model_path, test_questions, config):
             
             predictions.extend(pred_texts)
             ground_truths.extend(batch['answer_text'])
+            sample_questions.extend(batch['question_text'])
     
     # Calculate metrics
     metrics = evaluator.calculate_metrics(predictions, ground_truths)
@@ -52,4 +55,27 @@ def evaluate_model(model_path, test_questions, config):
     print(f"F1 Score: {metrics['f1_score']:.4f}")
     print(f"Exact matches: {metrics['exact_match_count']}/{metrics['total_count']}")
     
+    # Display sample results
+    print_sample_results(sample_questions, predictions, ground_truths)
+    
     return metrics, predictions, ground_truths
+
+def print_sample_results(questions, predictions, ground_truths, num_samples=10):
+    """Print sample results from the model"""
+    print("\n=== SAMPLE RESULTS ===")
+    print("-" * 80)
+    
+    # Show first few samples
+    for i in range(min(num_samples, len(questions))):
+        print(f"Sample {i+1}:")
+        print(f"Question: {questions[i]}")
+        print(f"Predicted: {predictions[i]}")
+        print(f"Ground Truth: {ground_truths[i]}")
+        
+        # Check if prediction matches ground truth
+        is_correct = predictions[i].strip().lower() == ground_truths[i].strip().lower()
+        print(f"Result: {'✓ CORRECT' if is_correct else '✗ INCORRECT'}")
+        print("-" * 40)
+    
+    print(f"Showing {min(num_samples, len(questions))} out of {len(questions)} total samples")
+    print("-" * 80)

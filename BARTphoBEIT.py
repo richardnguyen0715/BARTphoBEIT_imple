@@ -8,6 +8,7 @@ from transformers import (
     ViTFeatureExtractor, ViTModel,
     BartTokenizer, BartForConditionalGeneration
 )
+from transformers.modeling_outputs import BaseModelOutput
 from PIL import Image
 import pandas as pd
 import numpy as np
@@ -24,10 +25,11 @@ warnings.filterwarnings('ignore')
 class VietnameseVQADataset(Dataset):
     """Dataset class for Vietnamese VQA"""
     
-    def __init__(self, questions, image_dir, tokenizer, feature_extractor, max_length=128, transform=None):
+    def __init__(self, questions, image_dir, question_tokenizer, answer_tokenizer, feature_extractor, max_length=128, transform=None):
         self.questions = questions
         self.image_dir = image_dir
-        self.tokenizer = tokenizer
+        self.question_tokenizer = question_tokenizer
+        self.answer_tokenizer = answer_tokenizer
         self.feature_extractor = feature_extractor
         self.max_length = max_length
         self.transform = transform
@@ -59,9 +61,9 @@ class VietnameseVQADataset(Dataset):
         image_inputs = self.feature_extractor(images=image, return_tensors="pt")
         pixel_values = image_inputs['pixel_values'].squeeze(0)
         
-        # Tokenize question
+        # Tokenize question with question tokenizer (PhoBERT)
         question = question_data['question']
-        question_encoding = self.tokenizer(
+        question_encoding = self.question_tokenizer(
             question,
             max_length=self.max_length,
             padding='max_length',
@@ -69,9 +71,9 @@ class VietnameseVQADataset(Dataset):
             return_tensors='pt'
         )
         
-        # Tokenize answer
+        # Tokenize answer with answer tokenizer (BART)
         answer = question_data['ground_truth']
-        answer_encoding = self.tokenizer(
+        answer_encoding = self.answer_tokenizer(
             answer,
             max_length=32,  # Answers are typically shorter
             padding='max_length',
@@ -156,11 +158,24 @@ class VietnameseVQAModel(nn.Module):
     def forward(self, pixel_values, question_input_ids, question_attention_mask, 
                 answer_input_ids=None, answer_attention_mask=None):
         
+        # Debug: Check for invalid token IDs
+        if torch.any(question_input_ids < 0):
+            print(f"Warning: Found negative question token IDs: {torch.min(question_input_ids)}")
+            question_input_ids = torch.clamp(question_input_ids, 0, self.text_model.config.vocab_size - 1)
+        
+        if answer_input_ids is not None and torch.any(answer_input_ids < 0):
+            print(f"Warning: Found negative answer token IDs: {torch.min(answer_input_ids)}")
+            answer_input_ids = torch.clamp(answer_input_ids, 0, self.text_decoder.config.vocab_size - 1)
+        
         # Encode image
         vision_outputs = self.vision_model(pixel_values=pixel_values)
         vision_features = vision_outputs.last_hidden_state  # [batch, patches, vision_dim]
         
         # Encode question
+        # Clamp question token IDs to valid range
+        text_vocab_size = self.text_model.config.vocab_size
+        question_input_ids = torch.clamp(question_input_ids, 0, text_vocab_size - 1)
+        
         text_outputs = self.text_model(
             input_ids=question_input_ids,
             attention_mask=question_attention_mask
@@ -179,17 +194,31 @@ class VietnameseVQAModel(nn.Module):
         # Generate answer using decoder
         if answer_input_ids is not None:  # Training mode
             # Teacher forcing training
+            # Pool to [batch_size, 1, d_model]
+            pooled = decoder_inputs.mean(dim=1, keepdim=True)
+            # Repeat to match question length (or decoder input length)
+            pooled = pooled.repeat(1, answer_input_ids.size(1), 1)
+            
+            # Clamp token IDs to valid range to prevent CUDA index errors
+            vocab_size = self.text_decoder.config.vocab_size
+            answer_input_ids = torch.clamp(answer_input_ids, 0, vocab_size - 1)
+            
             decoder_outputs = self.text_decoder(
                 input_ids=answer_input_ids,
                 attention_mask=answer_attention_mask,
-                encoder_hidden_states=decoder_inputs,
+                encoder_outputs=BaseModelOutput(last_hidden_state=pooled),
                 labels=answer_input_ids
             )
             return decoder_outputs
         else:  # Inference mode
             # Generate answer
+            # Pool for consistent encoder output format
+            pooled = decoder_inputs.mean(dim=1, keepdim=True)
+            # Expand to minimum required length for generation
+            pooled = pooled.repeat(1, 1, 1)  # Keep as [batch, 1, d_model]
+            
             generated_ids = self.text_decoder.generate(
-                encoder_hidden_states=decoder_inputs,
+                encoder_outputs=BaseModelOutput(last_hidden_state=pooled),
                 max_length=32,
                 num_beams=4,
                 early_stopping=True,
