@@ -6,7 +6,8 @@ import torchvision.transforms as transforms
 from transformers import (
     AutoTokenizer, AutoModel, 
     ViTFeatureExtractor, ViTModel,
-    BartTokenizer, BartForConditionalGeneration
+    AutoTokenizer as BartphoTokenizer,  # Sử dụng AutoTokenizer cho BARTPho
+    BartForConditionalGeneration
 )
 from transformers.modeling_outputs import BaseModelOutput
 from PIL import Image
@@ -137,16 +138,17 @@ class VietnameseVQAModel(nn.Module):
         self.text_model = AutoModel.from_pretrained(model_config['text_model'])
         text_dim = self.text_model.config.hidden_size
         
-        # Text decoder (Vietnamese BART)
-        self.decoder_tokenizer = BartTokenizer.from_pretrained(model_config['decoder_model'])
+        # Text decoder (Vietnamese BART/BARTPho) - sử dụng AutoTokenizer
+        self.decoder_tokenizer = AutoTokenizer.from_pretrained(model_config['decoder_model'])
         self.text_decoder = BartForConditionalGeneration.from_pretrained(model_config['decoder_model'])
         
         # Fusion layer
         hidden_dim = model_config.get('hidden_dim', 768)
         self.fusion_layer = MultimodalFusionLayer(vision_dim, text_dim, hidden_dim)
         
-        # Output projection
-        self.output_proj = nn.Linear(hidden_dim, self.text_decoder.config.d_model)
+        # Output projection - cập nhật cho phù hợp với BARTPho
+        decoder_dim = self.text_decoder.config.d_model
+        self.output_proj = nn.Linear(hidden_dim, decoder_dim)
         
         # Freeze vision and text encoders initially
         if model_config.get('freeze_encoders', True):
@@ -154,6 +156,12 @@ class VietnameseVQAModel(nn.Module):
                 param.requires_grad = False
             for param in self.text_model.parameters():
                 param.requires_grad = False
+        
+        print(f"Model components:")
+        print(f"  Vision model: {model_config['vision_model']} (dim: {vision_dim})")
+        print(f"  Text model: {model_config['text_model']} (dim: {text_dim})")
+        print(f"  Decoder model: {model_config['decoder_model']} (dim: {decoder_dim})")
+        print(f"  Hidden dim: {hidden_dim}")
     
     def forward(self, pixel_values, question_input_ids, question_attention_mask, 
                 answer_input_ids=None, answer_attention_mask=None):
