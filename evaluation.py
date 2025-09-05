@@ -1,4 +1,6 @@
 from BARTphoBEIT import *
+from torch.utils.data import DataLoader
+from transformers import AutoTokenizer, BartTokenizer, ViTFeatureExtractor
 
 def evaluate_model(model_path, test_questions, config, load_pretrained=True):
     """Evaluate trained model"""

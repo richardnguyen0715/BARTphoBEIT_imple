@@ -166,24 +166,11 @@ class VietnameseVQAModel(nn.Module):
     def forward(self, pixel_values, question_input_ids, question_attention_mask, 
                 answer_input_ids=None, answer_attention_mask=None):
         
-        # Debug: Check for invalid token IDs
-        if torch.any(question_input_ids < 0):
-            print(f"Warning: Found negative question token IDs: {torch.min(question_input_ids)}")
-            question_input_ids = torch.clamp(question_input_ids, 0, self.text_model.config.vocab_size - 1)
-        
-        if answer_input_ids is not None and torch.any(answer_input_ids < 0):
-            print(f"Warning: Found negative answer token IDs: {torch.min(answer_input_ids)}")
-            answer_input_ids = torch.clamp(answer_input_ids, 0, self.text_decoder.config.vocab_size - 1)
-        
         # Encode image
         vision_outputs = self.vision_model(pixel_values=pixel_values)
         vision_features = vision_outputs.last_hidden_state  # [batch, patches, vision_dim]
         
         # Encode question
-        # Clamp question token IDs to valid range
-        text_vocab_size = self.text_model.config.vocab_size
-        question_input_ids = torch.clamp(question_input_ids, 0, text_vocab_size - 1)
-        
         text_outputs = self.text_model(
             input_ids=question_input_ids,
             attention_mask=question_attention_mask
@@ -196,14 +183,12 @@ class VietnameseVQAModel(nn.Module):
         # Project to decoder dimension
         decoder_inputs = self.output_proj(fused_features)
         
-        # Generate answer using decoder
         if answer_input_ids is not None:  # Training mode
-            # Teacher forcing training
-            # Pool to [batch_size, seq_len, d_model]
+            # Pool fused features để dùng làm encoder_outputs
             pooled = decoder_inputs.mean(dim=1, keepdim=True)
             pooled = pooled.repeat(1, answer_input_ids.size(1), 1)
             
-            # Clamp token IDs to valid range to prevent CUDA index errors
+            # Clamp để tránh index lỗi
             vocab_size = self.text_decoder.config.vocab_size
             answer_input_ids = torch.clamp(answer_input_ids, 0, vocab_size - 1)
             
@@ -215,22 +200,19 @@ class VietnameseVQAModel(nn.Module):
             )
             return decoder_outputs
         else:  # Inference mode
-            # Generate answer
             pooled = decoder_inputs.mean(dim=1, keepdim=True)
             
-            # Đối với MBart, cần chỉ định forced_bos_token_id
-            forced_bos_token_id = self.decoder_tokenizer.lang_code_to_id.get('vi_VN', self.decoder_tokenizer.eos_token_id)
-            
+            # Với BartPho, KHÔNG có lang_code_to_id
             generated_ids = self.text_decoder.generate(
                 encoder_outputs=BaseModelOutput(last_hidden_state=pooled),
                 max_length=32,
                 num_beams=4,
                 early_stopping=True,
                 pad_token_id=self.decoder_tokenizer.pad_token_id,
-                eos_token_id=self.decoder_tokenizer.eos_token_id,
-                forced_bos_token_id=forced_bos_token_id  # Quan trọng cho MBart
+                eos_token_id=self.decoder_tokenizer.eos_token_id
             )
             return generated_ids
+
 
 class VQAEvaluator:
     """Evaluator for VQA models with Vietnamese-specific metrics"""
