@@ -66,11 +66,11 @@ class EnhancedVietnameseVQADataset(VietnameseVQADataset):
             return_tensors='pt'
         )
         
-        # Tokenize answer with answer tokenizer (BART)
+        # ✅ OPTIMIZED: Reduced answer max length for Vietnamese (32 -> 16)
         answer = question_data['ground_truth']
         answer_encoding = self.answer_tokenizer(
             answer,
-            max_length=32,
+            max_length=16,  # Reduced from 32 to 16 for Vietnamese optimization
             padding='max_length',
             truncation=True,
             return_tensors='pt'

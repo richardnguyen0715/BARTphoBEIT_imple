@@ -156,6 +156,21 @@ class ImprovedVietnameseVQAModel(nn.Module):
         # Initialize with frozen encoders
         self.freeze_encoders()
         
+        # ✅ IMPROVED: Optimized pooling parameters for Vietnamese answers
+        # Reduced target length from 32 to 16 for Vietnamese (most answers <10 tokens)
+        self.pool_target_length = model_config.get('pool_target_length', 16)  # Reduced from 32
+        
+        # ✅ Attention pooling with learnable queries
+        self.pool_queries = nn.Parameter(torch.randn(self.pool_target_length, decoder_dim))
+        self.pool_attn = nn.MultiheadAttention(decoder_dim, num_heads=8, batch_first=True)
+        
+        # ✅ Learnable positional embeddings for pooled positions
+        self.pool_pos_emb = nn.Embedding(self.pool_target_length, decoder_dim)
+        
+        # Initialize positional embeddings
+        nn.init.normal_(self.pool_pos_emb.weight, std=0.02)
+        nn.init.normal_(self.pool_queries, std=0.02)
+
         print(f"Enhanced Model components:")
         print(f"  Vision model: {model_config['vision_model']} (dim: {vision_dim})")
         print(f"  Text model: {model_config['text_model']} (dim: {text_dim})")
@@ -163,6 +178,7 @@ class ImprovedVietnameseVQAModel(nn.Module):
         print(f"  Hidden dim: {hidden_dim}")
         print(f"  Dropout rate: {dropout_rate}")
         print(f"  Label smoothing: {self.label_smoothing}")
+        print(f"  Pool target length: {self.pool_target_length} (optimized for Vietnamese)")
     
     def freeze_encoders(self):
         """Freeze all encoder parameters"""
@@ -301,8 +317,8 @@ class ImprovedVietnameseVQAModel(nn.Module):
                     print(f"Warning: Found {invalid_tokens.sum()} invalid token IDs. Clamping to valid range.")
                 answer_input_ids = torch.clamp(answer_input_ids, 0, vocab_size - 1)
             
-            # FIXED: Match encoder length to decoder sequence length
-            decoder_seq_len = answer_input_ids.size(1)
+            # ✅ OPTIMIZED: Use attention pooling with positional embeddings
+            decoder_seq_len = min(answer_input_ids.size(1), self.pool_target_length)  # Cap at target length
             pooled_encoder_states = self.create_pooled_representation(
                 encoder_states, combined_attention_mask, target_length=decoder_seq_len
             )  # [batch, decoder_seq_len, 1024]
@@ -310,6 +326,7 @@ class ImprovedVietnameseVQAModel(nn.Module):
             if self.training and self._debug_step % self._debug_freq == 0:
                 print(f"  Pooled encoder states: {pooled_encoder_states.shape}")
                 print(f"  Answer input ids: {answer_input_ids.shape}")
+                print(f"  Target length optimized: {decoder_seq_len}")
             
             # Create proper encoder outputs
             encoder_outputs = self.create_encoder_outputs(pooled_encoder_states)
@@ -317,14 +334,14 @@ class ImprovedVietnameseVQAModel(nn.Module):
             if self.label_smoothing > 0:
                 # Custom loss with label smoothing
                 decoder_outputs = self.text_decoder(
-                    input_ids=answer_input_ids,
-                    attention_mask=answer_attention_mask,
+                    input_ids=answer_input_ids[:, :decoder_seq_len],  # Truncate to match encoder
+                    attention_mask=answer_attention_mask[:, :decoder_seq_len] if answer_attention_mask is not None else None,
                     encoder_outputs=encoder_outputs
                 )
                 
                 logits = decoder_outputs.logits
                 shift_logits = logits[..., :-1, :].contiguous()
-                shift_labels = answer_input_ids[..., 1:].contiguous()
+                shift_labels = answer_input_ids[:, 1:decoder_seq_len].contiguous()
                 
                 loss = F.cross_entropy(
                     shift_logits.view(-1, shift_logits.size(-1)),
@@ -354,10 +371,10 @@ class ImprovedVietnameseVQAModel(nn.Module):
             else:
                 # Standard loss
                 decoder_outputs = self.text_decoder(
-                    input_ids=answer_input_ids,
-                    attention_mask=answer_attention_mask,
+                    input_ids=answer_input_ids[:, :decoder_seq_len],
+                    attention_mask=answer_attention_mask[:, :decoder_seq_len] if answer_attention_mask is not None else None,
                     encoder_outputs=encoder_outputs,
-                    labels=answer_input_ids
+                    labels=answer_input_ids[:, :decoder_seq_len]
                 )
                 
                 if self.training and self._debug_step % self._debug_freq == 0:
@@ -366,16 +383,16 @@ class ImprovedVietnameseVQAModel(nn.Module):
                 return decoder_outputs
             
         else:  # Inference mode
-            # For generation, use fixed length
+            # For generation, use optimized target length
             pooled_encoder_states = self.create_pooled_representation(
-                encoder_states, combined_attention_mask, target_length=32
-            )  # [batch, 32, 1024]
+                encoder_states, combined_attention_mask, target_length=self.pool_target_length
+            )  # [batch, pool_target_length, 1024]
             
             encoder_outputs = self.create_encoder_outputs(pooled_encoder_states)
             
             generated_ids = self.text_decoder.generate(
                 encoder_outputs=encoder_outputs,
-                max_length=32,
+                max_length=self.pool_target_length,  # Use optimized length
                 min_length=2,
                 num_beams=4,
                 early_stopping=True,
@@ -390,40 +407,52 @@ class ImprovedVietnameseVQAModel(nn.Module):
     
     def create_pooled_representation(self, encoder_states, attention_mask, target_length=None):
         """
-        Create a decoder-compatible representation by matching decoder sequence length
+        ✅ IMPROVED: Attention pooling with learnable queries and positional embeddings
         """
         batch_size, seq_len, hidden_dim = encoder_states.shape
-        
-        # If target_length is None, use a reasonable default
         if target_length is None:
-            target_length = 32  # Match typical answer length
-        
-        # Use attention-weighted pooling for better representation
-        if attention_mask is not None:
-            # Expand attention mask to match hidden dimension
-            expanded_mask = attention_mask.unsqueeze(-1).expand_as(encoder_states)
-            # Zero out padded positions
-            masked_states = encoder_states * expanded_mask.float()
-            # Sum over sequence dimension
-            sum_states = masked_states.sum(dim=1)  # [batch, hidden_dim]
-            # Count non-padded positions
-            sum_mask = attention_mask.sum(dim=1, keepdim=True).float()  # [batch, 1]
-            # Average over non-padded positions
-            pooled_representation = sum_states / (sum_mask + 1e-9)  # [batch, hidden_dim]
-        else:
-            # Simple average pooling if no attention mask
-            pooled_representation = encoder_states.mean(dim=1)  # [batch, hidden_dim]
-        
-        # Expand to target sequence length
-        encoder_hidden_states = pooled_representation.unsqueeze(1).expand(
-            -1, target_length, -1
-        )  # [batch, target_length, hidden_dim]
-        
-        return encoder_hidden_states
+            target_length = self.pool_target_length
 
-# Enhanced evaluation functions
+        # ✅ Method 1: Adaptive pooling for different target lengths
+        if target_length != self.pool_target_length:
+            # Use adaptive pooling for different lengths
+            # Reshape for 1D adaptive pooling: [batch * hidden_dim, seq_len]
+            reshaped = encoder_states.transpose(1, 2).contiguous()  # [batch, hidden_dim, seq_len]
+            reshaped = reshaped.view(batch_size * hidden_dim, seq_len)  # [batch * hidden_dim, seq_len]
+            
+            # Apply adaptive average pooling
+            pooled = F.adaptive_avg_pool1d(reshaped.unsqueeze(1), target_length).squeeze(1)
+            # Reshape back: [batch, hidden_dim, target_length] -> [batch, target_length, hidden_dim]
+            pooled = pooled.view(batch_size, hidden_dim, target_length).transpose(1, 2)
+            
+            return pooled
+        
+        # ✅ Method 2: Attention pooling with learnable queries (preferred)
+        # Prepare queries: expand learnable queries to batch
+        queries = self.pool_queries.unsqueeze(0).expand(batch_size, -1, -1)  # [batch, target_length, hidden_dim]
+        
+        # Add positional embeddings to queries
+        pos_ids = torch.arange(target_length, device=queries.device)
+        pos_emb = self.pool_pos_emb(pos_ids).unsqueeze(0)  # [1, target_length, hidden_dim]
+        queries = queries + pos_emb  # Add positional information
+        
+        # Create key padding mask for attention
+        key_padding_mask = ~attention_mask.bool() if attention_mask is not None else None
+        
+        # Apply attention pooling: queries attend to encoder states
+        pooled, attention_weights = self.pool_attn(
+            queries,  # [batch, target_length, hidden_dim]
+            encoder_states,  # [batch, seq_len, hidden_dim]  
+            encoder_states,  # [batch, seq_len, hidden_dim]
+            key_padding_mask=key_padding_mask  # [batch, seq_len]
+        )
+        
+        # pooled: [batch, target_length, hidden_dim]
+        return pooled
+
+# ✅ ENHANCED: Comprehensive evaluation with BLEU/ROUGE logging
 def compute_metrics(predictions, references, tokenizer=None):
-    """Comprehensive evaluation metrics for Vietnamese VQA"""
+    """Comprehensive evaluation metrics for Vietnamese VQA with enhanced logging"""
     
     # Normalize answers
     norm_preds = [normalize_vietnamese_answer(pred) for pred in predictions]
@@ -440,7 +469,7 @@ def compute_metrics(predictions, references, tokenizer=None):
     for pred, ref in zip(norm_preds, norm_refs):
         if pred == ref:
             fuzzy_scores.append(1.0)
-        elif pred in ref or ref in pred:  # ✅ Fix typo: ref in ref -> ref in pred
+        elif pred in ref or ref in pred:
             fuzzy_scores.append(0.8)  # Partial credit for substring match
         else:
             # Use sequence matcher for similarity
@@ -480,12 +509,14 @@ def compute_metrics(predictions, references, tokenizer=None):
     metrics['token_recall'] = sum(token_recalls) / len(token_recalls)
     metrics['token_f1'] = sum(token_f1_scores) / len(token_f1_scores)
     
-    # 4. BLEU score (if nltk available)
+    # ✅ 4. BLEU score with enhanced logging
+    bleu_scores = []
+    bleu_available = False
     try:
         from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
         smoothing = SmoothingFunction().method4
+        bleu_available = True
         
-        bleu_scores = []
         for pred, ref in zip(norm_preds, norm_refs):
             pred_tokens = pred.split()
             ref_tokens = ref.split()
@@ -501,15 +532,28 @@ def compute_metrics(predictions, references, tokenizer=None):
                     bleu_scores.append(0.0)
         
         metrics['bleu'] = sum(bleu_scores) / len(bleu_scores)
+        
+        # ✅ Enhanced BLEU analysis for debugging
+        high_bleu_count = sum(1 for score in bleu_scores if score > 0.1)
+        zero_bleu_count = sum(1 for score in bleu_scores if score == 0.0)
+        
+        metrics['bleu_high_count'] = high_bleu_count
+        metrics['bleu_zero_count'] = zero_bleu_count
+        metrics['bleu_nonzero_ratio'] = (len(bleu_scores) - zero_bleu_count) / len(bleu_scores)
+        
     except ImportError:
         metrics['bleu'] = 0.0
+        metrics['bleu_available'] = False
+        print("⚠️  NLTK not available - BLEU score disabled")
     
-    # 5. ROUGE-L score (if rouge_score available)
+    # ✅ 5. ROUGE-L score with enhanced logging
+    rouge_scores = []
+    rouge_available = False
     try:
         from rouge_score import rouge_scorer
         scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=False)
+        rouge_available = True
         
-        rouge_scores = []
         for pred, ref in zip(norm_preds, norm_refs):
             try:
                 score = scorer.score(ref, pred)['rougeL'].fmeasure
@@ -518,12 +562,41 @@ def compute_metrics(predictions, references, tokenizer=None):
                 rouge_scores.append(0.0)
         
         metrics['rouge_l'] = sum(rouge_scores) / len(rouge_scores)
+        
+        # ✅ Enhanced ROUGE analysis
+        high_rouge_count = sum(1 for score in rouge_scores if score > 0.1)
+        zero_rouge_count = sum(1 for score in rouge_scores if score == 0.0)
+        
+        metrics['rouge_high_count'] = high_rouge_count
+        metrics['rouge_zero_count'] = zero_rouge_count
+        metrics['rouge_nonzero_ratio'] = (len(rouge_scores) - zero_rouge_count) / len(rouge_scores)
+        
     except ImportError:
         metrics['rouge_l'] = 0.0
+        metrics['rouge_available'] = False
+        print("⚠️  Rouge-score not available - ROUGE score disabled")
+    
+    # ✅ 6. Enhanced diagnostics for meaningless output detection
+    empty_pred_count = sum(1 for pred in norm_preds if len(pred.strip()) == 0)
+    repeated_pred_count = len(norm_preds) - len(set(norm_preds))  # How many predictions are duplicates
+    
+    metrics['empty_predictions'] = empty_pred_count
+    metrics['repeated_predictions'] = repeated_pred_count
+    metrics['unique_predictions'] = len(set(norm_preds))
     
     # Add counts for reference
     metrics['total_samples'] = len(predictions)
     metrics['exact_matches'] = sum(exact_matches)
+    
+    # ✅ Warning flags for debugging
+    if bleu_available and metrics['bleu'] < 0.01:
+        metrics['warning_low_bleu'] = True
+    if rouge_available and metrics['rouge_l'] < 0.01:
+        metrics['warning_low_rouge'] = True
+    if empty_pred_count > len(predictions) * 0.1:
+        metrics['warning_many_empty'] = True
+    if repeated_pred_count > len(predictions) * 0.5:
+        metrics['warning_repetitive'] = True
     
     return metrics
 
