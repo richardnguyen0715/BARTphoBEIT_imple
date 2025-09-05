@@ -1,0 +1,35 @@
+{
+  "metrics": {
+    "accuracy": 0.052,
+    "bleu_1": 0.19804787101643234,
+    "bleu_2": 0.19804787101643234,
+    "bleu_3": 0.19804787101643234,
+    "bleu_4": 0.19804787101643234,
+    "meteor": 0.10629199740425231,
+    "rouge": 0.228141928482072,
+    "cider": 0.7681462936237468,
+    "precision": 0.251547619047619,
+    "recall": 0.2345190476190476,
+    "f1": 0.23216006216006216,
+    "exact_match": 0.052,
+    "total_samples": 500,
+    "empty_predictions": 0
+  },
+  "config": {
+    "vision_model": "google/vit-base-patch16-224-in21k",
+    "text_model": "vinai/phobert-large",
+    "decoder_model": "vinai/bartpho-syllable",
+    "hidden_dim": 1024,
+    "max_length": 128,
+    "batch_size": 8,
+    "learning_rate": 3e-05,
+    "weight_decay": 0.01,
+    "num_epochs": 20,
+    "freeze_encoders": true,
+    "image_dir": "/home/tgng/coding/BARTphoBEIT_imple/images",
+    "device": "cuda"
+  },
+  "model_path": "/home/tgng/coding/BARTphoBEIT_imple/best_vqa_model.pth",
+  "timestamp": "20250906_002531",
+  "total_samples": 500
+}

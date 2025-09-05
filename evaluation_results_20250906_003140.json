@@ -1,0 +1,702 @@
+[
+  {
+    "id": 0,
+    "question": "Tại sao sàn nhà trong nhà bếp cần sửa chữa?",
+    "prediction": "Để sửa chữa gạch",
+    "ground_truth": "Vì có gạch hư",
+    "exact_match": false
+  },
+  {
+    "id": 1,
+    "question": "Những hoa văn trên các chiếc nơ này có điểm gì khác biệt?",
+    "prediction": "Có bốn chiếc nơ.",
+    "ground_truth": "Mỗi chiếc nơ có hoa văn riêng.",
+    "exact_match": false
+  },
+  {
+    "id": 2,
+    "question": "Con chuột đang nằm ở đâu so với bàn di chuột?",
+    "prediction": "Bàn phím",
+    "ground_truth": "Trên đầu trang của pad chuột",
+    "exact_match": false
+  },
+  {
+    "id": 3,
+    "question": "Màu sơn trong khu vực sinh hoạt là gì?",
+    "prediction": "Màu nâu",
+    "ground_truth": "Xanh và trắng.",
+    "exact_match": false
+  },
+  {
+    "id": 4,
+    "question": "Tường phòng khách được làm bằng chất liệu gì?",
+    "prediction": "Bằng gỗ",
+    "ground_truth": "Gạch màu vàng",
+    "exact_match": false
+  },
+  {
+    "id": 5,
+    "question": "Tổng cộng có bao nhiêu chiếc mũ được nhắc đến trong xe buýt?",
+    "prediction": "Một chiếc",
+    "ground_truth": "Hai chiếc mũ",
+    "exact_match": false
+  },
+  {
+    "id": 6,
+    "question": "Phòng khách chủ yếu được trang trí bằng màu gì?",
+    "prediction": "Màu trắng",
+    "ground_truth": "Màu trắng",
+    "exact_match": true
+  },
+  {
+    "id": 7,
+    "question": "Món ăn trên đĩa có những thành phần chính nào?",
+    "prediction": "Thịt bò nướng và rau",
+    "ground_truth": "Thịt bò và khoai tây",
+    "exact_match": false
+  },
+  {
+    "id": 8,
+    "question": "Có bao nhiêu món tráng miệng được nhắc đến trên đĩa?",
+    "prediction": "Hai loại",
+    "ground_truth": "Ba món tráng miệng",
+    "exact_match": false
+  },
+  {
+    "id": 9,
+    "question": "Loại hoa nào được đặt trong bình hoa lớn?",
+    "prediction": "Hoa hướng dương",
+    "ground_truth": "Hoa hồng trắng",
+    "exact_match": false
+  },
+  {
+    "id": 10,
+    "question": "Những bông hoa này có màu gì?",
+    "prediction": "Màu xanh lá cây",
+    "ground_truth": "Màu cam.",
+    "exact_match": false
+  },
+  {
+    "id": 11,
+    "question": "Những loại rau nào có trong bát cùng với thịt?",
+    "prediction": "Bông cải xanh và cà chua",
+    "ground_truth": "Rau củ",
+    "exact_match": false
+  },
+  {
+    "id": 12,
+    "question": "Cốc cà phê có đá bên trong không?",
+    "prediction": "Một cái cốc",
+    "ground_truth": "Không, không có đá",
+    "exact_match": false
+  },
+  {
+    "id": 13,
+    "question": "Có bao nhiêu bông hồng trắng nằm trong bình nước trong suốt?",
+    "prediction": "Hai bình hoa",
+    "ground_truth": "Ba bông",
+    "exact_match": false
+  },
+  {
+    "id": 14,
+    "question": "Con thú nhồi bông màu xanh xám và trắng đang làm gì?",
+    "prediction": "Đang nằm",
+    "ground_truth": "Đang ôm búp bê.",
+    "exact_match": false
+  },
+  {
+    "id": 15,
+    "question": "Có bao nhiêu thiết bị điện tử trên bàn?",
+    "prediction": "Hai thiết bị",
+    "ground_truth": "Một chiếc laptop",
+    "exact_match": false
+  },
+  {
+    "id": 16,
+    "question": "Cái ghế sofa trong phòng tắm có màu gì?",
+    "prediction": "Màu hồng",
+    "ground_truth": "Màu xanh",
+    "exact_match": false
+  },
+  {
+    "id": 17,
+    "question": "Đĩa thức ăn đang được phục vụ ở đâu?",
+    "prediction": "Thịt và rau",
+    "ground_truth": "Trên bàn ăn",
+    "exact_match": false
+  },
+  {
+    "id": 18,
+    "question": "Màu sắc chủ đạo của đĩa thức ăn này là gì?",
+    "prediction": "Gạo màu vàng",
+    "ground_truth": "Màu trắng của đĩa",
+    "exact_match": false
+  },
+  {
+    "id": 19,
+    "question": "Nhà bếp được mô tả trong chú thích có kiểu dáng gì?",
+    "prediction": "Tủ lạnh",
+    "ground_truth": "Hiện đại",
+    "exact_match": false
+  },
+  {
+    "id": 20,
+    "question": "Giấy dán tường trong phòng tắm có họa tiết gì?",
+    "prediction": "Đang được tu sửa",
+    "ground_truth": "Họa tiết hoa",
+    "exact_match": false
+  },
+  {
+    "id": 21,
+    "question": "Có bao nhiêu khăn tắm màu xanh trong phòng tắm này?",
+    "prediction": "Một",
+    "ground_truth": "Một chiếc khăn tắm màu xanh",
+    "exact_match": false
+  },
+  {
+    "id": 22,
+    "question": "Nhà bếp cabin mộc mạc được xây dựng bằng vật liệu gì?",
+    "prediction": "Thép không gỉ",
+    "ground_truth": "Được xây bằng các loại gỗ khác nhau",
+    "exact_match": false
+  },
+  {
+    "id": 23,
+    "question": "Có bao nhiêu nhân vật động vật được tạo hình trên chiếc bánh lớn?",
+    "prediction": "Bốn",
+    "ground_truth": "Hai",
+    "exact_match": false
+  },
+  {
+    "id": 24,
+    "question": "Người đàn ông này đang làm gì với chiếc điện thoại mới?",
+    "prediction": "Trong một chiếc hộp",
+    "ground_truth": "Anh ấy đang nhìn vào điện thoại",
+    "exact_match": false
+  },
+  {
+    "id": 25,
+    "question": "Vị trí của bồn tắm so với nhà vệ sinh trong phòng tắm như thế nào?",
+    "prediction": "Phòng tắm sáng sủa",
+    "ground_truth": "Bên cạnh",
+    "exact_match": false
+  },
+  {
+    "id": 26,
+    "question": "Có bao nhiêu hộp bánh rán trên bàn?",
+    "prediction": "Hai bàn",
+    "ground_truth": "Hai hộp",
+    "exact_match": false
+  },
+  {
+    "id": 27,
+    "question": "Căn phòng ngủ được mô tả là có đặc điểm gì nổi bật về phong cách?",
+    "prediction": "Màu trắng",
+    "ground_truth": "Tối giản",
+    "exact_match": false
+  },
+  {
+    "id": 28,
+    "question": "Có bao nhiêu loại ghế khác nhau được đề cập trong phòng?",
+    "prediction": "Hai chiếc",
+    "ground_truth": "Hai loại",
+    "exact_match": false
+  },
+  {
+    "id": 29,
+    "question": "Có bao nhiêu thiết bị điện tử trên bàn làm việc trong văn phòng?",
+    "prediction": "Một",
+    "ground_truth": "Nhiều hơn một",
+    "exact_match": false
+  },
+  {
+    "id": 30,
+    "question": "Đĩa thức ăn có bao nhiêu loại rau củ được thái lát để trang trí?",
+    "prediction": "Hai đĩa",
+    "ground_truth": "Hai loại",
+    "exact_match": false
+  },
+  {
+    "id": 31,
+    "question": "Bữa sáng này bao gồm những loại đồ ăn nào?",
+    "prediction": "Bánh sandwich trứng phô mai",
+    "ground_truth": "Bánh mì kẹp và khoai tây",
+    "exact_match": false
+  },
+  {
+    "id": 32,
+    "question": "Cô bé đang ngồi ở đâu?",
+    "prediction": "Trên bồn cầu",
+    "ground_truth": "Trên bô tập huấn",
+    "exact_match": false
+  },
+  {
+    "id": 33,
+    "question": "Tại sao chiếc bánh lại có vẻ dễ thương?",
+    "prediction": "Để trang trí",
+    "ground_truth": "Do màu sắc tươi sáng",
+    "exact_match": false
+  },
+  {
+    "id": 34,
+    "question": "Có bao nhiêu va li trên bàn?",
+    "prediction": "Rất nhiều chiếc",
+    "ground_truth": "Rất nhiều",
+    "exact_match": false
+  },
+  {
+    "id": 35,
+    "question": "Phòng tắm được trang trí bằng thiết kế nào?",
+    "prediction": "Phong cách bãi biển cát",
+    "ground_truth": "Thiết kế đá cẩm thạch màu xanh sáng",
+    "exact_match": false
+  },
+  {
+    "id": 36,
+    "question": "Cá nướng được chuẩn bị bên cạnh vật gì?",
+    "prediction": "Điện thoại và rau",
+    "ground_truth": "Một miếng bánh mì",
+    "exact_match": false
+  },
+  {
+    "id": 37,
+    "question": "Có những loại trái cây nào trong bát sữa chua?",
+    "prediction": "Một con",
+    "ground_truth": "Dâu tây và chuối",
+    "exact_match": false
+  },
+  {
+    "id": 38,
+    "question": "Món ăn có bông cải xanh đã nấu chín được đặt trên vật gì?",
+    "prediction": "Một chiếc đĩa",
+    "ground_truth": "Trên đĩa",
+    "exact_match": false
+  },
+  {
+    "id": 39,
+    "question": "Cái ghế bập bênh màu gì?",
+    "prediction": "Màu nâu",
+    "ground_truth": "Màu bơ xanh",
+    "exact_match": false
+  },
+  {
+    "id": 40,
+    "question": "Có những loại đồ uống nào được nhắc đến trong mô tả?",
+    "prediction": "Hai đĩa",
+    "ground_truth": "Đồ uống",
+    "exact_match": false
+  },
+  {
+    "id": 41,
+    "question": "Những chiếc đồng hồ trong tủ trưng bày có những màu gì?",
+    "prediction": "Màu đen",
+    "ground_truth": "Nhiều màu khác nhau",
+    "exact_match": false
+  },
+  {
+    "id": 42,
+    "question": "Bông hoa trong bình màu đen có đặc điểm gì nổi bật?",
+    "prediction": "Có hoa và trắng",
+    "ground_truth": "Màu đỏ",
+    "exact_match": false
+  },
+  {
+    "id": 43,
+    "question": "Các thành phần chính của món salad mì ống này là gì?",
+    "prediction": "Hình vuông",
+    "ground_truth": "Mì ống, bông cải xanh, cà chua",
+    "exact_match": false
+  },
+  {
+    "id": 44,
+    "question": "Chiếc bánh sandwich được đặt trên loại đĩa nào?",
+    "prediction": "Xúc xích và dưa chua",
+    "ground_truth": "Đĩa trắng",
+    "exact_match": false
+  },
+  {
+    "id": 45,
+    "question": "Bình hoa thủy tiên được đặt ở đâu trong phòng khách?",
+    "prediction": "Trên bàn",
+    "ground_truth": "Trên bàn",
+    "exact_match": true
+  },
+  {
+    "id": 46,
+    "question": "Căn phòng này có mấy chiếc giường?",
+    "prediction": "Giường, bàn nhỏ",
+    "ground_truth": "Hai chiếc",
+    "exact_match": false
+  },
+  {
+    "id": 47,
+    "question": "Bếp lò này có bao nhiêu lò nướng?",
+    "prediction": "Hai lò nướng",
+    "ground_truth": "Có hai lò nướng.",
+    "exact_match": false
+  },
+  {
+    "id": 48,
+    "question": "Các chai nước uống và đồ ăn nhẹ được lưu trữ ở đâu trong tủ bếp?",
+    "prediction": "Trên quầy",
+    "ground_truth": "Trong tủ trên bánh xe",
+    "exact_match": false
+  },
+  {
+    "id": 49,
+    "question": "Con chó con trên bánh được làm từ chất liệu gì?",
+    "prediction": "Một chiếc bánh rán",
+    "ground_truth": "Có lẽ là fondant",
+    "exact_match": false
+  },
+  {
+    "id": 50,
+    "question": "Có bao nhiêu chai nước được mô tả trong hình ảnh?",
+    "prediction": "Hai chiếc",
+    "ground_truth": "Một chai",
+    "exact_match": false
+  },
+  {
+    "id": 51,
+    "question": "Chiếc ngăn kéo dưới của lò nướng đôi có đặc điểm gì?",
+    "prediction": "Đầy màu sắc",
+    "ground_truth": "Hơi mở",
+    "exact_match": false
+  },
+  {
+    "id": 52,
+    "question": "Màu sắc của chiếc giường lớn trong phòng ngủ là gì?",
+    "prediction": "Màu vàng",
+    "ground_truth": "Màu trắng",
+    "exact_match": false
+  },
+  {
+    "id": 53,
+    "question": "Món ăn trên khay gỗ có chứa những loại rau nào?",
+    "prediction": "Bông cải xanh và cà chua",
+    "ground_truth": "Bông cải xanh và súp lơ",
+    "exact_match": false
+  },
+  {
+    "id": 54,
+    "question": "Phòng khách sạn này được trang trí theo chủ đề gì?",
+    "prediction": "Giường cỡ King",
+    "ground_truth": "Chủ đề hàng hải",
+    "exact_match": false
+  },
+  {
+    "id": 55,
+    "question": "Căn phòng có mấy đồ vật chính?",
+    "prediction": "Bốn",
+    "ground_truth": "Ba đồ vật",
+    "exact_match": false
+  },
+  {
+    "id": 56,
+    "question": "Phòng tắm có màu chủ đạo là gì?",
+    "prediction": "Màu trắng",
+    "ground_truth": "Màu trắng.",
+    "exact_match": false
+  },
+  {
+    "id": 57,
+    "question": "Màu sắc chủ đạo của chiếc đĩa đựng thức ăn là gì?",
+    "prediction": "Màu đỏ",
+    "ground_truth": "Xanh và trắng.",
+    "exact_match": false
+  },
+  {
+    "id": 58,
+    "question": "Có bao nhiêu đầu vòi sen trong phòng tắm?",
+    "prediction": "Hai người",
+    "ground_truth": "Hai",
+    "exact_match": false
+  },
+  {
+    "id": 59,
+    "question": "Khăn tắm trong phòng tắm có màu gì?",
+    "prediction": "Đá cẩm thạch",
+    "ground_truth": "Màu trắng",
+    "exact_match": false
+  },
+  {
+    "id": 60,
+    "question": "Có những thiết bị nhà bếp chính nào được nhắc đến?",
+    "prediction": "Bồn rửa, bếp, lò vi sóng",
+    "ground_truth": "Lò nướng",
+    "exact_match": false
+  },
+  {
+    "id": 61,
+    "question": "Món ăn này có những loại rau củ nào?",
+    "prediction": "Bông cải xanh và hành tây",
+    "ground_truth": "Bông cải xanh.",
+    "exact_match": false
+  },
+  {
+    "id": 62,
+    "question": "Các vật thể chính có thể nhìn thấy qua ô cửa phòng tắm là gì?",
+    "prediction": "Màu hồng",
+    "ground_truth": "Quầy, gương, bồn rửa",
+    "exact_match": false
+  },
+  {
+    "id": 63,
+    "question": "Màu sắc nổi bật của những chiếc giường trong phòng khách sạn là gì?",
+    "prediction": "Phòng khách sạn",
+    "ground_truth": "Màu vàng",
+    "exact_match": false
+  },
+  {
+    "id": 64,
+    "question": "Có bao nhiêu máy tính xách tay trên chiếc bàn đông đúc?",
+    "prediction": "Ba người",
+    "ground_truth": "Ba chiếc",
+    "exact_match": false
+  },
+  {
+    "id": 65,
+    "question": "Hoa văn trên tường có đặc điểm gì?",
+    "prediction": "Màu trắng",
+    "ground_truth": "Có hoa văn độc đáo",
+    "exact_match": false
+  },
+  {
+    "id": 66,
+    "question": "Phòng tắm có màu sắc chủ đạo là gì?",
+    "prediction": "Màu nâu",
+    "ground_truth": "Màu trắng và xanh lá cây",
+    "exact_match": false
+  },
+  {
+    "id": 67,
+    "question": "Những loại quả nào có màu vàng trong giỏ?",
+    "prediction": "Đầy màu sắc",
+    "ground_truth": "Cam và chuối.",
+    "exact_match": false
+  },
+  {
+    "id": 68,
+    "question": "Bàn được làm từ vật liệu gì?",
+    "prediction": "Gỗ",
+    "ground_truth": "Gỗ tối màu",
+    "exact_match": false
+  },
+  {
+    "id": 69,
+    "question": "Phòng tắm được trang trí theo tông màu chủ đạo nào?",
+    "prediction": "Phản chiếu tốt",
+    "ground_truth": "Màu tím và vàng",
+    "exact_match": false
+  },
+  {
+    "id": 70,
+    "question": "Hình dạng của gương trong phòng tắm như thế nào?",
+    "prediction": "Trên bồn rửa",
+    "ground_truth": "Kỳ lạ",
+    "exact_match": false
+  },
+  {
+    "id": 71,
+    "question": "Phòng khách có ghế sofa màu gì và ghế nệm màu gì?",
+    "prediction": "Màu đỏ",
+    "ground_truth": "Sofa màu trắng, ghế nệm màu đen",
+    "exact_match": false
+  },
+  {
+    "id": 72,
+    "question": "Chiếc đồng hồ có màu gì và được trang trí như thế nào?",
+    "prediction": "Nằm bên dưới",
+    "ground_truth": "Màu vàng, trang trí công phu",
+    "exact_match": false
+  },
+  {
+    "id": 73,
+    "question": "Phòng tắm có những thiết bị vệ sinh màu gì?",
+    "prediction": "Màu vàng",
+    "ground_truth": "Màu trắng",
+    "exact_match": false
+  },
+  {
+    "id": 74,
+    "question": "Món ăn này bao gồm những loại thực phẩm nào?",
+    "prediction": "Gà thịt và bông cải xanh",
+    "ground_truth": "Thịt và bông cải xanh",
+    "exact_match": false
+  },
+  {
+    "id": 75,
+    "question": "Có bao nhiêu quả táo đỏ trong giỏ dưới bức tranh?",
+    "prediction": "Hai bức tranh",
+    "ground_truth": "Đầy giỏ táo",
+    "exact_match": false
+  },
+  {
+    "id": 76,
+    "question": "Có bao nhiêu máy tính xách tay đang ngồi trên quầy?",
+    "prediction": "Hai loại",
+    "ground_truth": "Hai chiếc",
+    "exact_match": false
+  },
+  {
+    "id": 77,
+    "question": "Tổng cộng có bao nhiêu túi hành lý được đề cập trong mô tả?",
+    "prediction": "Một số",
+    "ground_truth": "Năm túi hành lý",
+    "exact_match": false
+  },
+  {
+    "id": 78,
+    "question": "Các mặt hàng bánh nướng được phủ men bằng cách nào?",
+    "prediction": "Trong tủ trưng bày",
+    "ground_truth": "Từ máy móc thương mại",
+    "exact_match": false
+  },
+  {
+    "id": 79,
+    "question": "Người trong ảnh có khả năng sẽ làm gì tiếp theo với ly rượu?",
+    "prediction": "Chuẩn bị thử nghiệm",
+    "ground_truth": "Thử nếm rượu vang",
+    "exact_match": false
+  },
+  {
+    "id": 80,
+    "question": "Có bao nhiêu chồng sách được nhìn thấy?",
+    "prediction": "Hai cuốn sách",
+    "ground_truth": "Một chồng",
+    "exact_match": false
+  },
+  {
+    "id": 81,
+    "question": "Phòng tắm có những đồ vật gì ngoài bồn tắm và nhà vệ sinh?",
+    "prediction": "Để trang trí",
+    "ground_truth": "Rèm tắm, ống nước, khăn trải giường",
+    "exact_match": false
+  },
+  {
+    "id": 82,
+    "question": "Trái cây bị rơi ra khỏi đĩa có màu sắc như thế nào so với cam chưa bóc vỏ?",
+    "prediction": "Bông cải xanh",
+    "ground_truth": "Không thể xác định",
+    "exact_match": false
+  },
+  {
+    "id": 83,
+    "question": "Chiếc bánh được mô tả có màu gì?",
+    "prediction": "Màu xanh",
+    "ground_truth": "Màu hồng",
+    "exact_match": false
+  },
+  {
+    "id": 84,
+    "question": "Có bao nhiêu vật dụng được đặt trên quầy?",
+    "prediction": "Hai chiếc",
+    "ground_truth": "Năm vật dụng",
+    "exact_match": false
+  },
+  {
+    "id": 85,
+    "question": "Có bao nhiêu màn hình trưng bày món tráng miệng trong cửa hàng?",
+    "prediction": "Một vài",
+    "ground_truth": "Một màn hình",
+    "exact_match": false
+  },
+  {
+    "id": 86,
+    "question": "Đồng hồ lớn được đặt ở đâu trong tòa nhà?",
+    "prediction": "Bên dưới chiếc đồng hồ",
+    "ground_truth": "Trên cao",
+    "exact_match": false
+  },
+  {
+    "id": 87,
+    "question": "Những loại thức ăn nào được bày trên bàn?",
+    "prediction": "Một số loại",
+    "ground_truth": "Xúc xích và khoai tây chiên.",
+    "exact_match": false
+  },
+  {
+    "id": 88,
+    "question": "Giường tầng trong phòng có kiểu chăn ga như thế nào?",
+    "prediction": "Giường tầng dưới",
+    "ground_truth": "Có chăn ga hoa",
+    "exact_match": false
+  },
+  {
+    "id": 89,
+    "question": "Màu sắc của tủ bếp trong căn bếp này là gì?",
+    "prediction": "Màu trắng",
+    "ground_truth": "Màu vàng",
+    "exact_match": false
+  },
+  {
+    "id": 90,
+    "question": "Bình hoa được đặt ở đâu?",
+    "prediction": "Trên cây đàn piano",
+    "ground_truth": "Trên cây đàn piano",
+    "exact_match": true
+  },
+  {
+    "id": 91,
+    "question": "Phòng khách này có những vật dụng gì để trang trí hoặc sử dụng?",
+    "prediction": "Đèn nháp",
+    "ground_truth": "Lò sưởi, bộ tản nhiệt",
+    "exact_match": false
+  },
+  {
+    "id": 92,
+    "question": "Chiếc bánh bunt được phủ gì?",
+    "prediction": "Màu đỏ",
+    "ground_truth": "Kem",
+    "exact_match": false
+  },
+  {
+    "id": 93,
+    "question": "Bữa trưa sang trọng được phục vụ trên đĩa màu gì?",
+    "prediction": "Đĩa trắng",
+    "ground_truth": "Đĩa màu trắng",
+    "exact_match": false
+  },
+  {
+    "id": 94,
+    "question": "Gương trong phòng tắm được chia thành mấy mảnh?",
+    "prediction": "Hai cửa sổ",
+    "ground_truth": "Ba mảnh",
+    "exact_match": false
+  },
+  {
+    "id": 95,
+    "question": "Có bao nhiêu bình hoa riêng biệt được đặt trên bàn?",
+    "prediction": "Năm loại bình",
+    "ground_truth": "Bốn bình",
+    "exact_match": false
+  },
+  {
+    "id": 96,
+    "question": "Tổng cộng có bao nhiêu vali và túi nhỏ đang chờ được nhặt lên?",
+    "prediction": "Một chiếc",
+    "ground_truth": "Bốn",
+    "exact_match": false
+  },
+  {
+    "id": 97,
+    "question": "Món tráng miệng có hình dạng gì?",
+    "prediction": "Đĩa thức ăn",
+    "ground_truth": "Giống quả bóng chày",
+    "exact_match": false
+  },
+  {
+    "id": 98,
+    "question": "Có bao nhiêu cây gậy bóng chày được nhắc đến?",
+    "prediction": "Hai chiếc",
+    "ground_truth": "Ba cây gậy",
+    "exact_match": false
+  },
+  {
+    "id": 99,
+    "question": "Bồn cầu và bồn rửa có mối quan hệ không gian như thế nào?",
+    "prediction": "Phong cách mộc mạc",
+    "ground_truth": "Nằm cạnh nhau",
+    "exact_match": false
+  }
+]
