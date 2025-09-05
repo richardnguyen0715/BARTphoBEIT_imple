@@ -1,5 +1,4 @@
 from evaluation import *
-from fintune import *
 from setup_app import *
 import json
 from datetime import datetime
@@ -7,18 +6,57 @@ from datetime import datetime
 # Config phải match với config đã dùng để train
 config = {
     'vision_model': 'google/vit-base-patch16-224-in21k',
-    'text_model': 'vinai/phobert-large',  # QUAN TRỌNG: phải là phobert-large
-    'decoder_model': 'vinai/bartpho-syllable',  # QUAN TRỌNG: phải là bartpho-syllable
-    'hidden_dim': 1024,  # QUAN TRỌNG: phải là 1024, không phải 768
+    'text_model': 'vinai/phobert-large',
+    'decoder_model': 'vinai/bartpho-syllable',
+    'hidden_dim': 1024,
     'max_length': 128,
-    'batch_size': 8,  # Increase batch size for faster evaluation
+    'batch_size': 8,
     'learning_rate': 3e-5,
     'weight_decay': 0.01,
     'num_epochs': 20,
     'freeze_encoders': False,
     'image_dir': '/home/tgng/coding/BARTphoBEIT_imple/images',
-    'device': 'cuda' if torch.cuda.is_available() else 'cpu'
+    'device': 'cuda' if torch.cuda.is_available() else 'cpu',
+    
+    # Add improved configuration parameters
+    'decoder_lr': 1e-4,
+    'encoder_lr': 1e-5,
+    'vision_lr': 5e-6,
+    'label_smoothing': 0.1,
+    'dropout_rate': 0.2,
 }
+
+def enhanced_analyze_answer_distribution(predictions, ground_truths):
+    """Enhanced analysis with Vietnamese-specific insights"""
+    from model_architechture import normalize_vietnamese_answer
+    
+    print("\n" + "="*60)
+    print("ENHANCED ANSWER DISTRIBUTION ANALYSIS")
+    print("="*60)
+    
+    # Normalize answers for analysis
+    norm_predictions = [normalize_vietnamese_answer(pred) for pred in predictions]
+    norm_ground_truths = [normalize_vietnamese_answer(gt) for gt in ground_truths]
+    
+    # Original analysis
+    analyze_answer_distribution(predictions, ground_truths)
+    
+    # Enhanced Vietnamese-specific analysis
+    print("\nVietnamese-specific Analysis:")
+    
+    # Check for common Vietnamese answer patterns
+    common_patterns = {
+        'colors': ['đỏ', 'xanh', 'vàng', 'đen', 'trắng', 'nâu'],
+        'numbers': ['một', 'hai', 'ba', 'không', 'nhiều', 'ít'],
+        'animals': ['chó', 'mèo', 'chim', 'bò', 'gà', 'cá'],
+        'actions': ['đang', 'bay', 'chạy', 'ngồi', 'đứng', 'ăn']
+    }
+    
+    for category, words in common_patterns.items():
+        pred_count = sum(1 for pred in norm_predictions if any(word in pred for word in words))
+        gt_count = sum(1 for gt in norm_ground_truths if any(word in gt for word in words))
+        print(f"  {category.capitalize()}: Predicted {pred_count}, Ground truth {gt_count}")
+
 
 def save_evaluation_results(metrics, predictions, ground_truths, questions, config, model_path):
     """Save evaluation results to files"""
@@ -85,7 +123,8 @@ def compare_models():
     results['finetuned'] = finetuned_metrics
     
     # Analyze answer distribution for finetuned model
-    analyze_answer_distribution(finetuned_predictions, finetuned_ground_truths)
+    # analyze_answer_distribution(finetuned_predictions, finetuned_ground_truths)
+    enhanced_analyze_answer_distribution(finetuned_predictions, finetuned_ground_truths)
     
     # Save results
     save_evaluation_results(

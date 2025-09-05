@@ -166,6 +166,8 @@ class VietnameseVQAModel(nn.Module):
     def forward(self, pixel_values, question_input_ids, question_attention_mask, 
                 answer_input_ids=None, answer_attention_mask=None):
         
+        batch_size = pixel_values.size(0)
+        
         # Encode image
         vision_outputs = self.vision_model(pixel_values=pixel_values)
         vision_features = vision_outputs.last_hidden_state  # [batch, patches, vision_dim]
@@ -184,32 +186,58 @@ class VietnameseVQAModel(nn.Module):
         decoder_inputs = self.output_proj(fused_features)
         
         if answer_input_ids is not None:  # Training mode
-            # Pool fused features để dùng làm encoder_outputs
-            pooled = decoder_inputs.mean(dim=1, keepdim=True)
-            pooled = pooled.repeat(1, answer_input_ids.size(1), 1)
+            # FIXED: Create proper encoder representation that matches decoder expectations
+            # Use the answer sequence length to avoid dimension mismatch
+            target_seq_len = answer_input_ids.size(1)
             
-            # Clamp để tránh index lỗi
+            # Average pool the fused features and expand to match target sequence length
+            pooled = decoder_inputs.mean(dim=1, keepdim=True)  # [batch, 1, decoder_dim]
+            encoder_hidden_states = pooled.expand(-1, target_seq_len, -1)  # [batch, target_seq_len, decoder_dim]
+            
+            # Validate token IDs to avoid out-of-vocabulary errors
             vocab_size = self.text_decoder.config.vocab_size
             answer_input_ids = torch.clamp(answer_input_ids, 0, vocab_size - 1)
             
-            decoder_outputs = self.text_decoder(
-                input_ids=answer_input_ids,
-                attention_mask=answer_attention_mask,
-                encoder_outputs=BaseModelOutput(last_hidden_state=pooled),
-                labels=answer_input_ids
-            )
-            return decoder_outputs
-        else:  # Inference mode
-            pooled = decoder_inputs.mean(dim=1, keepdim=True)
+            # Create encoder outputs with proper dimensions
+            encoder_outputs = BaseModelOutput(last_hidden_state=encoder_hidden_states)
             
-            # Với BartPho, KHÔNG có lang_code_to_id
+            try:
+                decoder_outputs = self.text_decoder(
+                    input_ids=answer_input_ids,
+                    attention_mask=answer_attention_mask,
+                    encoder_outputs=encoder_outputs,
+                    labels=answer_input_ids
+                )
+                return decoder_outputs
+            except Exception as e:
+                print(f"Decoder error: {e}")
+                print(f"Encoder hidden states shape: {encoder_hidden_states.shape}")
+                print(f"Answer input ids shape: {answer_input_ids.shape}")
+                print(f"Answer attention mask shape: {answer_attention_mask.shape}")
+                raise e
+                
+        else:  # Inference mode
+            # For generation, we need a different approach
+            # Use a fixed sequence length for encoder outputs
+            fixed_seq_len = 32  # Match typical answer length
+            
+            # Average pool and expand to fixed length
+            pooled = decoder_inputs.mean(dim=1, keepdim=True)
+            encoder_hidden_states = pooled.expand(-1, fixed_seq_len, -1)
+            
+            encoder_outputs = BaseModelOutput(last_hidden_state=encoder_hidden_states)
+            
             generated_ids = self.text_decoder.generate(
-                encoder_outputs=BaseModelOutput(last_hidden_state=pooled),
+                encoder_outputs=encoder_outputs,
                 max_length=32,
+                min_length=1,
                 num_beams=4,
                 early_stopping=True,
                 pad_token_id=self.decoder_tokenizer.pad_token_id,
-                eos_token_id=self.decoder_tokenizer.eos_token_id
+                eos_token_id=self.decoder_tokenizer.eos_token_id,
+                do_sample=False,
+                repetition_penalty=1.1,
+                length_penalty=1.0
             )
             return generated_ids
 
@@ -431,7 +459,7 @@ class VQATrainer:
 def prepare_data_from_dataframe(df):
     """Convert your existing dataframe format to questions list"""
     # Filter out questions starting with "Mối quan hệ" as in your code
-    df = df[~df['question'].str.startswith("Mối quan hệ")]
+    # df = df[~df['question'].str.startswith("Mối quan hệ")]
     print(f"Dataframe len: {len(df)}")
     
     # Parse answers if they're string representations of lists
