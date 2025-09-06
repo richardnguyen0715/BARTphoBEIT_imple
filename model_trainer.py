@@ -148,91 +148,6 @@ class ImprovedVQATrainer:
         for group in param_groups:
             print(f"  {group['name']}: {len(group['params'])} params, lr={group['lr']}")
     
-    def train_epoch(self, epoch):
-        """Enhanced training epoch"""
-        self.model.train()
-        total_loss = 0
-        num_batches = len(self.train_loader)
-        
-        # Stage management
-        if epoch == self.config['stage1_epochs']:
-            print("\n" + "="*60)
-            print("SWITCHING TO STAGE 2: Partial encoder unfreezing")
-            print("="*60)
-            self.model.partial_unfreeze(self.config['unfreeze_last_n_layers'])
-            self.setup_optimizers_and_schedulers()  # Recreate optimizer
-            self.current_stage = 2
-        
-        progress_bar = tqdm(self.train_loader, desc=f"Stage {self.current_stage} - Epoch {epoch+1}")
-        
-        for batch_idx, batch in enumerate(progress_bar):
-            # Move batch to device
-            for key in batch:
-                if isinstance(batch[key], torch.Tensor):
-                    batch[key] = batch[key].to(self.device)
-            
-            self.optimizer.zero_grad()
-            
-            # Forward pass
-            outputs = self.model(
-                pixel_values=batch['pixel_values'],
-                question_input_ids=batch['question_input_ids'],
-                question_attention_mask=batch['question_attention_mask'],
-                answer_input_ids=batch['answer_input_ids'],
-                answer_attention_mask=batch['answer_attention_mask']
-            )
-            
-            loss = outputs.loss
-            
-            # Backward pass
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
-            self.optimizer.step()
-            self.scheduler.step()
-            
-            total_loss += loss.item()
-            self.global_step += 1
-            
-            # Update progress bar
-            current_lr = self.scheduler.get_last_lr()[0]
-            progress_bar.set_postfix({
-                'Loss': f"{loss.item():.4f}",
-                'Avg Loss': f"{total_loss/(batch_idx+1):.4f}",
-                'LR': f"{current_lr:.2e}",
-                'Stage': self.current_stage
-            })
-            
-            # Log to wandb
-            if self.use_wandb and batch_idx % 50 == 0:
-                wandb.log({
-                    'train_loss': loss.item(),
-                    'learning_rate': current_lr,
-                    'epoch': epoch,
-                    'stage': self.current_stage,
-                    'global_step': self.global_step
-                })
-            
-            # Evaluate every N steps
-            if (self.config.get('evaluate_every_n_steps', 1000) > 0 and 
-                self.global_step % self.config['evaluate_every_n_steps'] == 0):
-                
-                print(f"\nEvaluating at step {self.global_step}...")
-                val_metrics, predictions, ground_truths = self.evaluate_vqa()
-                
-                if self.use_wandb:
-                    wandb.log({
-                        'val_accuracy': val_metrics['accuracy'],
-                        'val_fuzzy_accuracy': val_metrics['fuzzy_accuracy'],
-                        'val_f1_score': val_metrics['f1_score'],
-                        'val_bleu_1': val_metrics.get('bleu_1', 0),
-                        'val_rouge_l': val_metrics.get('rouge_l', 0),
-                        'global_step': self.global_step
-                    })
-                
-                self.model.train()  # Back to training mode
-        
-        return total_loss / num_batches
-    
     def evaluate_vqa(self):
         """Enhanced VQA evaluation with comprehensive metrics"""
         self.model.eval()
@@ -333,42 +248,74 @@ class ImprovedVQATrainer:
         metrics['recall'] = np.mean(recalls)
         metrics['f1_score'] = np.mean(f1_scores)
         
-        # BLEU and ROUGE scores
+        # ✅ ENHANCED: More robust BLEU and ROUGE scoring with better error handling
         if BLEU_ROUGE_AVAILABLE and self.config.get('calculate_bleu_rouge', True):
-            bleu_scores = {'bleu_1': [], 'bleu_2': [], 'bleu_3': [], 'bleu_4': []}
-            rouge_scores = {'rouge1': [], 'rouge2': [], 'rougeL': []}
-            
-            for pred, gt in zip(norm_predictions, norm_ground_truths):
-                pred_tokens = pred.split()
-                gt_tokens = gt.split()
+            try:
+                bleu_scores = {'bleu_1': [], 'bleu_2': [], 'bleu_3': [], 'bleu_4': []}
+                rouge_scores = {'rouge1': [], 'rouge2': [], 'rougeL': []}
                 
-                # BLEU scores
-                for n in range(1, 5):
+                for pred, gt in zip(norm_predictions, norm_ground_truths):
+                    pred_tokens = pred.split()
+                    gt_tokens = gt.split()
+                    
+                    # BLEU scores with better error handling
+                    for n in range(1, 5):
+                        try:
+                            if len(gt_tokens) == 0:
+                                bleu_scores[f'bleu_{n}'].append(0.0)
+                            else:
+                                bleu = sentence_bleu([gt_tokens], pred_tokens, 
+                                                   weights=tuple([1/n]*n + [0]*(4-n)),
+                                                   smoothing_function=self.smoothing_function)
+                                bleu_scores[f'bleu_{n}'].append(bleu)
+                        except Exception as e:
+                            bleu_scores[f'bleu_{n}'].append(0.0)
+                    
+                    # ROUGE scores with better error handling
                     try:
-                        bleu = sentence_bleu([gt_tokens], pred_tokens, 
-                                           weights=tuple([1/n]*n + [0]*(4-n)),
-                                           smoothing_function=self.smoothing_function)
-                        bleu_scores[f'bleu_{n}'].append(bleu)
-                    except:
-                        bleu_scores[f'bleu_{n}'].append(0.0)
+                        rouge_result = self.rouge_scorer.score(gt, pred)
+                        rouge_scores['rouge1'].append(rouge_result['rouge1'].fmeasure)
+                        rouge_scores['rouge2'].append(rouge_result['rouge2'].fmeasure)
+                        rouge_scores['rougeL'].append(rouge_result['rougeL'].fmeasure)
+                    except Exception as e:
+                        rouge_scores['rouge1'].append(0.0)
+                        rouge_scores['rouge2'].append(0.0)
+                        rouge_scores['rougeL'].append(0.0)
                 
-                # ROUGE scores
-                try:
-                    rouge_result = self.rouge_scorer.score(gt, pred)
-                    rouge_scores['rouge1'].append(rouge_result['rouge1'].fmeasure)
-                    rouge_scores['rouge2'].append(rouge_result['rouge2'].fmeasure)
-                    rouge_scores['rougeL'].append(rouge_result['rougeL'].fmeasure)
-                except:
-                    rouge_scores['rouge1'].append(0.0)
-                    rouge_scores['rouge2'].append(0.0)
-                    rouge_scores['rougeL'].append(0.0)
-            
-            # Add averaged scores to metrics
-            for key, scores in bleu_scores.items():
-                metrics[key] = np.mean(scores) if scores else 0.0
-            
-            for key, scores in rouge_scores.items():
-                metrics[key.lower()] = np.mean(scores) if scores else 0.0
+                # Add averaged scores to metrics with consistent key naming
+                for key, scores in bleu_scores.items():
+                    metrics[key] = np.mean(scores) if scores else 0.0
+                    
+                    # ✅ Add diagnostic counts for BLEU
+                    zero_count = sum(1 for s in scores if s == 0.0)
+                    metrics[f'{key}_zero_count'] = zero_count
+                    metrics[f'{key}_nonzero_ratio'] = (len(scores) - zero_count) / len(scores) if scores else 0.0
+                
+                # ✅ FIXED: Consistent ROUGE key naming
+                metrics['rouge1'] = np.mean(rouge_scores['rouge1']) if rouge_scores['rouge1'] else 0.0
+                metrics['rouge2'] = np.mean(rouge_scores['rouge2']) if rouge_scores['rouge2'] else 0.0
+                metrics['rougel'] = np.mean(rouge_scores['rougeL']) if rouge_scores['rougeL'] else 0.0  # Use 'rougel' consistently
+                
+                # Add diagnostic counts for ROUGE
+                for key in ['rouge1', 'rouge2', 'rougel']:
+                    source_key = 'rougeL' if key == 'rougel' else key
+                    if source_key in rouge_scores:
+                        zero_count = sum(1 for s in rouge_scores[source_key] if s == 0.0)
+                        metrics[f'{key}_zero_count'] = zero_count
+                        metrics[f'{key}_nonzero_ratio'] = (len(rouge_scores[source_key]) - zero_count) / len(rouge_scores[source_key]) if rouge_scores[source_key] else 0.0
+                
+                print(f"✓ BLEU/ROUGE calculated successfully")
+                
+            except Exception as e:
+                print(f"⚠️  Error calculating BLEU/ROUGE: {e}")
+                # Set default values if calculation fails
+                for n in range(1, 5):
+                    metrics[f'bleu_{n}'] = 0.0
+                metrics['rouge1'] = 0.0
+                metrics['rouge2'] = 0.0
+                metrics['rougel'] = 0.0
+        else:
+            print(f"⚠️  BLEU/ROUGE calculation disabled or unavailable")
         
         # Add counts
         metrics['exact_match_count'] = sum(exact_matches)
@@ -477,18 +424,67 @@ class ImprovedVQATrainer:
             print(f"    Recall: {val_metrics['recall']:.4f}")
             print(f"    F1 Score: {val_metrics['f1_score']:.4f}")
             
-            if 'bleu_1' in val_metrics:
-                print(f"    BLEU-1: {val_metrics['bleu_1']:.4f}")
-                print(f"    BLEU-4: {val_metrics['bleu_4']:.4f}")
-                print(f"    ROUGE-L: {val_metrics['rouge_l']:.4f}")
+            # ✅ FIXED: Safe access to BLEU/ROUGE metrics with default values
+            if val_metrics.get('bleu_1') is not None:
+                print(f"    BLEU-1: {val_metrics.get('bleu_1', 0.0):.4f}")
+                print(f"    BLEU-4: {val_metrics.get('bleu_4', 0.0):.4f}")
+            else:
+                print(f"    BLEU-1: N/A (NLTK not available)")
+                print(f"    BLEU-4: N/A (NLTK not available)")
+                
+            if val_metrics.get('rougel') is not None:
+                print(f"    ROUGE-L: {val_metrics.get('rougel', 0.0):.4f}")
+            elif val_metrics.get('rouge_l') is not None:
+                print(f"    ROUGE-L: {val_metrics.get('rouge_l', 0.0):.4f}")
+            else:
+                print(f"    ROUGE-L: N/A (rouge-score not available)")
             
-            # Log to wandb
+            # ✅ Enhanced diagnostic information for debugging
+            print(f"    Additional Diagnostics:")
+            if 'exact_match_count' in val_metrics:
+                print(f"      Exact matches: {val_metrics['exact_match_count']}/{val_metrics['total_count']}")
+            
+            # Show sample predictions for debugging
+            if predictions and len(predictions) > 0:
+                print(f"    Sample Predictions (first 3):")
+                for i in range(min(3, len(predictions))):
+                    pred_norm = normalize_vietnamese_answer(predictions[i])
+                    gt_norm = normalize_vietnamese_answer(ground_truths[i])
+                    match_status = "✓" if pred_norm == gt_norm else "✗"
+                    print(f"      {match_status} Pred: '{pred_norm}' | GT: '{gt_norm}'")
+            
+            # Log to wandb with safe key access
             if self.use_wandb:
                 log_dict = {
                     'epoch': epoch,
                     'train_loss': train_loss,
-                    **{f'val_{k}': v for k, v in val_metrics.items() if isinstance(v, (int, float))}
+                    'val_accuracy': val_metrics['accuracy'],
+                    'val_fuzzy_accuracy': val_metrics['fuzzy_accuracy'],
+                    'val_precision': val_metrics['precision'],
+                    'val_recall': val_metrics['recall'],
+                    'val_f1_score': val_metrics['f1_score']
                 }
+                
+                # ✅ Safely add BLEU/ROUGE metrics if available
+                if val_metrics.get('bleu_1') is not None:
+                    log_dict.update({
+                        'val_bleu_1': val_metrics.get('bleu_1', 0.0),
+                        'val_bleu_2': val_metrics.get('bleu_2', 0.0),
+                        'val_bleu_3': val_metrics.get('bleu_3', 0.0),
+                        'val_bleu_4': val_metrics.get('bleu_4', 0.0)
+                    })
+                
+                if val_metrics.get('rougel') is not None:
+                    log_dict.update({
+                        'val_rouge1': val_metrics.get('rouge1', 0.0),
+                        'val_rouge2': val_metrics.get('rouge2', 0.0),
+                        'val_rougel': val_metrics.get('rougel', 0.0)
+                    })
+                elif val_metrics.get('rouge_l') is not None:
+                    log_dict.update({
+                        'val_rouge_l': val_metrics.get('rouge_l', 0.0)
+                    })
+                
                 wandb.log(log_dict)
             
             # Check if this is the best model
@@ -527,3 +523,111 @@ class ImprovedVQATrainer:
             wandb.finish()
         
         return self.best_fuzzy_accuracy
+
+    def train_epoch(self, epoch):
+        """Enhanced training epoch"""
+        self.model.train()
+        total_loss = 0
+        num_batches = len(self.train_loader)
+        
+        # Stage management
+        if epoch == self.config['stage1_epochs']:
+            print("\n" + "="*60)
+            print("SWITCHING TO STAGE 2: Partial encoder unfreezing")
+            print("="*60)
+            self.model.partial_unfreeze(self.config['unfreeze_last_n_layers'])
+            self.setup_optimizers_and_schedulers()  # Recreate optimizer
+            self.current_stage = 2
+        
+        progress_bar = tqdm(self.train_loader, desc=f"Stage {self.current_stage} - Epoch {epoch+1}")
+        
+        for batch_idx, batch in enumerate(progress_bar):
+            # Move batch to device
+            for key in batch:
+                if isinstance(batch[key], torch.Tensor):
+                    batch[key] = batch[key].to(self.device)
+            
+            self.optimizer.zero_grad()
+            
+            # Forward pass
+            outputs = self.model(
+                pixel_values=batch['pixel_values'],
+                question_input_ids=batch['question_input_ids'],
+                question_attention_mask=batch['question_attention_mask'],
+                answer_input_ids=batch['answer_input_ids'],
+                answer_attention_mask=batch['answer_attention_mask']
+            )
+            
+            loss = outputs.loss
+            
+            # Backward pass
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
+            self.optimizer.step()
+            self.scheduler.step()
+            
+            total_loss += loss.item()
+            self.global_step += 1
+            
+            # Update progress bar
+            current_lr = self.scheduler.get_last_lr()[0]
+            progress_bar.set_postfix({
+                'Loss': f"{loss.item():.4f}",
+                'Avg Loss': f"{total_loss/(batch_idx+1):.4f}",
+                'LR': f"{current_lr:.2e}",
+                'Stage': self.current_stage
+            })
+            
+            # Log to wandb
+            if self.use_wandb and batch_idx % 50 == 0:
+                wandb.log({
+                    'train_loss': loss.item(),
+                    'learning_rate': current_lr,
+                    'epoch': epoch,
+                    'stage': self.current_stage,
+                    'global_step': self.global_step
+                })
+            
+            # ✅ ENHANCED: More frequent evaluation during early training for debugging
+            eval_freq = self.config.get('evaluate_every_n_steps', 1000)
+            if epoch < 2:  # More frequent eval in first 2 epochs
+                eval_freq = min(eval_freq, 200)
+            
+            if (eval_freq > 0 and self.global_step % eval_freq == 0):
+                print(f"\nEvaluating at step {self.global_step}...")
+                val_metrics, predictions, ground_truths = self.evaluate_vqa()
+                
+                # ✅ Enhanced step-level logging for debugging
+                print(f"Step {self.global_step} metrics:")
+                print(f"  Accuracy: {val_metrics['accuracy']:.4f}")
+                print(f"  Fuzzy Accuracy: {val_metrics['fuzzy_accuracy']:.4f}")
+                print(f"  F1 Score: {val_metrics['f1_score']:.4f}")
+                
+                # ✅ BLEU/ROUGE diagnostic logging
+                if val_metrics.get('bleu_1') is not None:
+                    print(f"  BLEU-1: {val_metrics.get('bleu_1', 0.0):.4f} (zero count: {val_metrics.get('bleu_zero_count', 'N/A')})")
+                if val_metrics.get('rougel') is not None or val_metrics.get('rouge_l') is not None:
+                    rouge_score = val_metrics.get('rougel', val_metrics.get('rouge_l', 0.0))
+                    print(f"  ROUGE-L: {rouge_score:.4f}")
+                
+                if self.use_wandb:
+                    step_log_dict = {
+                        'step_val_accuracy': val_metrics['accuracy'],
+                        'step_val_fuzzy_accuracy': val_metrics['fuzzy_accuracy'],
+                        'step_val_f1_score': val_metrics['f1_score'],
+                        'global_step': self.global_step
+                    }
+                    
+                    # Safe BLEU/ROUGE logging
+                    if val_metrics.get('bleu_1') is not None:
+                        step_log_dict['step_val_bleu_1'] = val_metrics.get('bleu_1', 0)
+                    if val_metrics.get('rougel') is not None:
+                        step_log_dict['step_val_rougel'] = val_metrics.get('rougel', 0)
+                    elif val_metrics.get('rouge_l') is not None:
+                        step_log_dict['step_val_rouge_l'] = val_metrics.get('rouge_l', 0)
+                    
+                    wandb.log(step_log_dict)
+                
+                self.model.train()  # Back to training mode
+        
+        return total_loss / num_batches

@@ -158,7 +158,7 @@ class ImprovedVietnameseVQAModel(nn.Module):
         
         # ✅ IMPROVED: Optimized pooling parameters for Vietnamese answers
         # Reduced target length from 32 to 16 for Vietnamese (most answers <10 tokens)
-        self.pool_target_length = model_config.get('pool_target_length', 16)  # Reduced from 32
+        self.pool_target_length = model_config.get('pool_target_length', 32)  # Reduced from 32
         
         # ✅ Attention pooling with learnable queries
         self.pool_queries = nn.Parameter(torch.randn(self.pool_target_length, decoder_dim))

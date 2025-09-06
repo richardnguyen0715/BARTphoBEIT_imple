@@ -70,7 +70,7 @@ class EnhancedVietnameseVQADataset(VietnameseVQADataset):
         answer = question_data['ground_truth']
         answer_encoding = self.answer_tokenizer(
             answer,
-            max_length=16,  # Reduced from 32 to 16 for Vietnamese optimization
+            max_length=32,  # Reduced from 32 to 16 for Vietnamese optimization
             padding='max_length',
             truncation=True,
             return_tensors='pt'
